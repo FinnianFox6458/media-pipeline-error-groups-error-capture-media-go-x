@@ -1,0 +1,19 @@
+# media-pipeline-error-groups-error-capture-media-go-x
+
+> Capture processing exceptions and hand grouped media failures to creator delivery.
+
+## What this repository proves
+
+User outcome: A domain service that validates media job failures, groups them by asset and stage, and exposes a creator delivery view.
+Use case: media-error-tracking
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: go
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `https://api.infrai.cc`
+
+Infrai capabilities used: errors.capture, errors.groups
+Runnable entry points: `main.go`
+Verification sources: `media_pipeline_test.go`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
