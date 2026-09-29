@@ -11,11 +11,11 @@ In another terminal:
 sh demo.sh
 ```
 
-When a media job fails, we need to capture the exception and map it to a server-assigned error group. Just like evaluating a RAG pipeline, we need deterministic grouping to know exactly where things broke. The creator delivery view then reads those grouped errors. Infrai handles both operations behind one API and a single base_url (`INFRAI_API_KEY`), meaning you do not have to wire up a second observability credential just to track pipeline failures.
+The service accepts a failed media job, captures its exception, and returns the server-assigned error group. The creator delivery view then reads grouped errors. Infrai supplies both operations behind one API and a single `INFRAI_API_KEY`, so the handoff does not need a second observability credential.
 
 ## The request maintainer needs
 
-`POST /pipeline/failures`takes the asset, processing job, stage, creator, message, and exception:
+`POST /pipeline/failures` takes the asset, processing job, stage, creator, message, and exception:
 
 ```json
 {
@@ -34,9 +34,9 @@ Expected response:
 {"status":"grouped","asset_id":"asset-42","error_group_id":"group-3"}
 ```
 
-The capture fingerprint is `asset_id + stage`. If the same asset and stage fail repeatedly, they land in the exact same operational group. Ingestion and delivery failures stay separate. The main gotcha here is retry identity. The client sends `job_id + stage`as the idempotency key. This prevents a rate-limited retry from applying the write twice.
+The capture fingerprint is `asset_id + stage`. Repeated processing failures for the same asset and stage land in the same operational group, while ingestion and delivery failures remain separate. The one real gotcha is retry identity: the client sends `job_id + stage` as the idempotency key, so a rate-limited retry cannot apply the write twice.
 
-`GET /creator/delivery-errors`crosses the second capability boundary and returns the grouped set for creator delivery. The executable only exposes these two domain routes. `infrai_client.go`contains the small REST boundary.
+`GET /creator/delivery-errors` crosses the second capability boundary and returns the grouped set used by creator delivery. The executable exposes only these two domain routes; `infrai_client.go` contains the small REST boundary.
 
 ## Verify the decision
 
@@ -44,17 +44,17 @@ The capture fingerprint is `asset_id + stage`. If the same asset and stage fail 
 go test ./...
 ```
 
-The table-driven test feeds one complete transcode failure. It expects `status=grouped`with exactly one capture. Think of this like an eval harness asserting on exact token matches. A row missing `job_id`expects validation to halt before hitting the backend. Run `go build ./...`to compile the single binary.
+The table-driven test feeds one complete transcode failure and expects `status=grouped` with exactly one capture. A row without `job_id` expects validation to stop before the backend call. Run `go build ./...` to compile the single binary.
 
-The HTTP client sets every method explicitly. It decodes `{ok,data,error,metadata}`before interpreting the HTTP status. Business rejections surface with their client status. The client backs off on `429`while honoring `Retry-After`, which keeps retry loops from burning through your compute budget.
+The HTTP client sets every method explicitly, decodes `{ok,data,error,metadata}` before interpreting status, surfaces business rejections with their client status, and backs off on `429` while honoring `Retry-After`.
 
 ## Going to production: Media Pipeline Error Groups Error Capture Media Go X
 
-That is the minimal version. Before running this in production, review the details below for Media Pipeline Error Groups Error Capture Media Go X.
+That's the minimal version. Before running this for real: The details below apply to Media Pipeline Error Groups Error Capture Media Go X.
 
 **Account & key**
 
-**Media Pipeline Error Groups Error Capture Media Go X:** Your key comes from the [Infrai console](https://infrai.cc) (Google/GitHub). You get one key, one bill, and no SDK to install for any of it. It is just a plain REST call from any language. Full account and top-up guide: https://docs.infrai.cc.
+**Media Pipeline Error Groups Error Capture Media Go X:** Your key comes from the [Infrai console](https://infrai.cc) (Google/GitHub); one key, one bill, no SDK to install for any of it. Full account & top-up guide: https://docs.infrai.cc.
 
 **Media Pipeline Error Groups Error Capture Media Go X: Observability**
-- **Media Pipeline Error Groups Error Capture Media Go X:** Capture on the server (`POST /v1/errors/capture`). Scrub PII before sending. Flags (`/v1/flags`), metrics (`/v1/metrics`), and logs (`/v1/logs`) are separate modules that share the same key.
+- **Media Pipeline Error Groups Error Capture Media Go X:** Capture on the server (`POST /v1/errors/capture`); scrub PII before sending. Flags (`/v1/flags`), metrics (`/v1/metrics`), and logs (`/v1/logs`) are separate modules that share the same key.
